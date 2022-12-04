@@ -1,0 +1,201 @@
+#!/bin/bash
+# Updating cardano node to latest V
+# ENIGMA Stake Pool
+### USE this for color text   ### echo -e "\e[1;31m  \e[0m"
+
+###################################
+# Check for sudo user #
+###################################
+
+if [[ "$(/usr/bin/whoami)" != "root" ]]; then
+sudo -p "The script needs the admin/sudo password to continue, please enter: " date 2>/dev/null 1>&2
+        if [ ! $? = 0 ]; then
+            echo -e "\e[1;31m You entered an invalid password. Script aborted. \e[0m"
+            exit 1
+        fi
+fi
+
+####################################
+# Update Linux #
+####################################
+read -p "Update OS (Linux)? (yes or [no]): " INPUT
+
+case $INPUT in
+  y|yes)
+        echo -e "\e[1;31m Updating Operating System (Linux)... please wait \e[0m"
+        sleep 3
+        sudo apt-get update
+        ;;
+*)
+        echo -e "\e[1;31m Skipped! The software upgrade will continue without updating the Operating System... please wait \e[0m"
+        sleep 3
+        ;;
+esac
+
+####################################
+# Stop the node #
+####################################
+
+sudo systemctl stop cnode
+sudo pkill cardano-node
+echo -e "\e[1;31m Stoping the node... please wait \e[0m"
+sleep 10
+
+####################################
+# Cabal  #
+####################################
+
+cd ~/.cabal/bin
+sudo rm *
+sleep 5
+cabal clean
+echo -e "\e[1;31m updating cabal \e[0m"
+cabal update
+echo -e "\e[1;31m sleep for 5 sec \e[0m"
+sleep 5
+
+####################################
+# prereqs #
+####################################
+
+cd ~/git
+sudo rm -rf cardano-node
+cd "$HOME/tmp"
+rm -r prereqs.sh
+curl -sS -o prereqs.sh https://raw.githubusercontent.com/cardano-community/guild-operators/master/scripts/cnode-helper-scripts/prereqs.sh
+chmod 755 prereqs.sh
+echo -e "\e[1;31m running prereqs \e[0m"
+./prereqs.sh -f
+
+####################################
+# cnode #
+####################################
+
+echo -e "\e[1;31m Installing latest cardano node \e[0m"
+cd ~/git
+git clone https://github.com/input-output-hk/cardano-node
+cd cardano-node
+git fetch --tags --all
+git pull
+git checkout $(curl -s https://api.github.com/repos/input-output-hk/cardano-node/releases/latest | jq -r .tag_name)
+echo -e "package cardano-crypto-praos\n  flags: -external-libsodium-vrf" > cabal.project.local
+echo -e "\e[1;31m Sit back relex and enjoy the show, This might take up to 30 mins \e[0m"
+$CNODE_HOME/scripts/cabal-build-all.sh
+sleep 3
+echo -e "\e[1;31m cardano cli version \e[0m"
+cardano-cli version
+sleep 3
+echo -e "\e[1;31m cardano node version \e[0m"
+cardano-node version
+sleep 3
+ 
+####################################
+# Edit the files #
+####################################
+
+
+####################################
+# Update env file #
+####################################
+read -p "Would you like to edit your env? (yes or [no]): " ENV
+
+case $ENV in
+  y|yes)
+        echo -e "\e[1;31m Opening the env file. (if running as BP then add your pool name)... please wait \e[0m"
+        sleep 3
+        nano $CNODE_HOME/scripts/env
+        ;;
+*)
+        echo -e "\e[1;31m Skipped! You need to manually edit the file ... please wait \e[0m"
+        sleep 3
+        ;;
+esac
+
+####################################
+# Update cncli.sh file #
+####################################
+read -p "Would you like to edit your cncli.sh? (yes or [no]): " CNC
+
+case $CNC in
+  y|yes)
+        echo -e "\e[1;31m Lets edit cncli.sh file... please wait \e[0m"
+        sleep 3
+        nano $CNODE_HOME/scripts/cncli.sh
+        ;;
+*)
+        echo -e "\e[1;31m Skipped! You need to manually edit the file ... please wait \e[0m"
+        sleep 3
+        ;;
+esac
+
+####################################
+# Update cnode.sh file #
+####################################
+read -p "Would you like to edit your cnode.sh? (yes or [no]): " CNO
+
+case $CNO in
+  y|yes)
+        echo -e "\e[1;31m Lets edit cnode.sh file... please wait \e[0m"
+        sleep 3
+        nano $CNODE_HOME/scripts/cnode.sh
+        ;;
+*)
+        echo -e "\e[1;31m Skipped! You need to manually edit the file ... please wait \e[0m"
+        sleep 3
+        ;;
+esac
+
+####################################
+# Update gLiveView.sh file #
+####################################
+read -p "Would you like to edit your gLiveView.sh? (yes or [no]): " GLIV
+
+case $GLIV in
+  y|yes)
+        echo -e "\e[1;31m Lets edit gLiveView.sh file... please wait \e[0m"
+        sleep 3
+        nano $CNODE_HOME/scripts/gLiveView.sh
+        ;;
+*)
+        echo -e "\e[1;31m Skipped! You need to manually edit the file ... please wait \e[0m"
+        sleep 3
+        ;;
+esac
+
+####################################
+# Update topologyUpdater.sh file #
+####################################
+read -p "Would you like to edit your topologyUpdater.sh? (yes or [no]): " TPUP
+
+case $TPUP in
+  y|yes)
+        echo -e "\e[1;31m Lets edit topologyUpdater.sh file. (Do not edit the file if running as BP) \e[0m"
+        sleep 3
+        nano $CNODE_HOME/scripts/topologyUpdater.sh
+        ;;
+*)
+        echo -e "\e[1;31m Skipped! You need to manually edit the file ... please wait \e[0m"
+        sleep 3
+        ;;
+esac
+
+####################################
+# Start the node #
+####################################
+read -p "Would you like to start the node? (yes or [no]): " STA
+
+case $STA in
+  y|yes)
+        echo -e "\e[1;31m Stating the node.... please wait \e[0m"
+        sleep 3
+        cd $CNODE_HOME/scripts/
+        sudo systemctl start cnode
+        ;;
+*)
+        echo -e "\e[1;31m Skipped! You need to manually start the node... please wait \e[0m"
+        sleep 3
+        ;;
+esac
+
+echo -e "\e[1;31m Script is finished \e[0m"
+echo -e "\e[1;31m Makesure to cd into scripts folder to run gLiveView by typing [ ./gLliveView.sh ] to view the process... \e[0m"
